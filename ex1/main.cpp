@@ -10,61 +10,88 @@ vector<vector<double>> A;
 
 void normaliza()
 {
-  printf("A[0][0] = %d \n", A[0][0]);
-  int i, j;
-  double suma = 0.0, suma2 = 0.0, factor;
-#pragma omp parallel for private(i, suma2) reduction(+ \
-                                                     : suma)
-  for (i = 0; i < N; i++)
+  double suma = 0.0, factor = 0.0;
+#pragma omp parallel for reduction(+ \
+                                   : suma)
+  for (int i = 0; i < N; i++)
   {
-#pragma omp parallel for private(j) reduction(+ \
-                                              : suma2)
-    for (j = 0; j < N; j++)
+    double suma2 = 0.0;
+    for (int j = 0; j < N; j++)
     {
       suma2 += (A[i][j] * A[i][j]);
-      printf("i = %d, j= %d, threadId = %d, suma2 = %d a = %d \n",
-             i, j, omp_get_thread_num(), suma2, A[i][j]);
     }
     suma += suma2;
   }
 
-  printf("suma=%d\n", suma);
   factor = 1.0 / sqrt(suma);
+  printf("suma = %f, factor = %f \n", suma, factor);
 
 #pragma omp parallel for
-  for (i = 0; i < N; i++)
+  for (int i = 0; i < N; i++)
   {
-#pragma omp parallel for
-    for (j = 0; j < N; j++)
+    for (int j = 0; j < N; j++)
     {
       A[i][j] = factor * A[i][j];
     }
   }
 }
 
+void normaliza2()
+{
+  double suma = 0.0, factor = 0.0;
+
+#pragma omp parallel
+  {
+#pragma omp for reduction(+ \
+                          : suma)
+    for (int i = 0; i < N; i++)
+    {
+      double suma2 = 0.0;
+      for (int j = 0; j < N; j++)
+      {
+        suma2 += (A[i][j] * A[i][j]);
+      }
+      suma += suma2;
+    }
+
+#pragma omp single
+    {
+      factor = 1.0 / sqrt(suma);
+      printf("suma = %f, factor = %f \n", suma, factor);
+    }
+
+#pragma omp for
+    for (int i = 0; i < N; i++)
+    {
+      for (int j = 0; j < N; j++)
+      {
+        A[i][j] = factor * A[i][j];
+      }
+    }
+  }
+}
+
 int main(void)
 {
-  int i, j;
   A.resize(N, vector<double>(N));
 
-  for (i = 0; i < N; i++)
+  for (int i = 0; i < N; i++)
   {
-    for (j = 0; j < N; j++)
+    for (int j = 0; j < N; j++)
     {
-      A[i][j] = i + j;
+      A[i][j] = i + j + 1;
+      printf("%d %d %f \n", i, j, A[i][j]);
     }
   }
 
-  printf("N = %d, A[0][0] = %d \n", N, A[0][0]);
-  normaliza();
+  normaliza2();
 
-  for (i = 0; i < N; i++)
+  for (int i = 0; i < N; i++)
   {
-    for (j = 0; j < N; j++)
+    for (int j = 0; j < N; j++)
     {
-      printf("%d ", A[i][j]);
+      printf("%d %d %f \n", i, j, A[i][j]);
     }
-    printf("\n");
   }
 
   return 0;
